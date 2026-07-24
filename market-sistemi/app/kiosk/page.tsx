@@ -3,19 +3,13 @@ import { useState, useEffect } from "react";
 import QRCode from "react-qr-code";
 
 export default function DinamikQREkrani() {
-  // Token'ı sadece useState içinde ve bileşen açıldığında bir kez üretiyoruz
   const [token, setToken] = useState<string>(() => 
     Math.random().toString(36).substring(2, 10).toUpperCase()
   );
   
   const [kalanSaniye, setKalanSaniye] = useState<number>(30);
-  const [domain, setDomain] = useState<string>("");
 
   useEffect(() => {
-    setDomain(window.location.origin);
-
-    // useEffect içinde ASLA doğrudan setState (setToken) çağırmıyoruz, 
-    // sadece setInterval içinde fonksiyon tetikliyoruz (lint kuralını aşmanın tek yolu budur).
     const zamanlayici = setInterval(() => {
       setKalanSaniye((onceki) => {
         if (onceki <= 1) {
@@ -29,7 +23,8 @@ export default function DinamikQREkrani() {
     return () => clearInterval(zamanlayici);
   }, []);
 
-  const qrLink = domain ? `${domain}/giris?token=${token}` : '';
+  // State kullanmadan doğrudan adresi alıyoruz, lint hatası kökünden yok oldu!
+  const qrLink = typeof window !== 'undefined' ? `${window.location.origin}/giris?token=${token}` : '';
 
   return (
     <div style={{ 
