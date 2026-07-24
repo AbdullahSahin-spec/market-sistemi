@@ -1,8 +1,7 @@
+export const dynamic = 'force-dynamic'; // Next.js'in Build aşamasında burayı çalıştırmasını kesin olarak yasaklar!
+
 import { NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
-
-// Her istekte veritabanından en taze veriyi çekmesini zorluyoruz
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -11,13 +10,13 @@ export async function GET() {
         personel: true,
       },
       orderBy: {
-        tarih: 'desc', // En yeni işlemler en üstte görünsün
+        tarih: 'desc',
       },
     });
 
     return NextResponse.json(hareketler, { status: 200 });
   } catch (error) {
-    console.error("Veri çekme hatası:", error);
+    console.error("Hareketleri çekme hatası:", error);
     return NextResponse.json({ error: "Veriler alınamadı" }, { status: 500 });
   }
 }
