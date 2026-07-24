@@ -5,9 +5,12 @@ import QRCode from "react-qr-code";
 export default function DinamikQREkrani() {
   const [token, setToken] = useState<string>("");
   const [kalanSaniye, setKalanSaniye] = useState<number>(30);
+  const [domain, setDomain] = useState<string>("");
 
   useEffect(() => {
-    // İlk açılışta rastgele bilet üreten fonksiyonu güvenli bir şekilde çağırıyoruz
+    // Tarayıcı açıldığında domain adresini güvenli bir şekilde alıyoruz
+    setDomain(window.location.origin);
+
     const rastgeleBilet = Math.random().toString(36).substring(2, 10).toUpperCase();
     setToken(rastgeleBilet);
 
@@ -25,7 +28,7 @@ export default function DinamikQREkrani() {
     return () => clearInterval(zamanlayici);
   }, []);
 
-  const qrLink = `https://${window.location.host}/giris?token=${token}`;
+  const qrLink = domain ? `${domain}/giris?token=${token}` : `http://localhost:3000/giris?token=${token}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#111827', color: 'white', fontFamily: 'sans-serif' }}>
