@@ -3,23 +3,20 @@ import { useState, useEffect } from "react";
 import QRCode from "react-qr-code";
 
 export default function DinamikQREkrani() {
-  const [token, setToken] = useState<string>("yukleniyor");
+  const [token, setToken] = useState<string>("");
   const [kalanSaniye, setKalanSaniye] = useState<number>(30);
 
-  // 30 saniyede bir yeni ve benzersiz bir şifre üreten fonksiyon
-  const tokenUret = () => {
+  useEffect(() => {
+    // İlk açılışta rastgele bilet üreten fonksiyonu güvenli bir şekilde çağırıyoruz
     const rastgeleBilet = Math.random().toString(36).substring(2, 10).toUpperCase();
     setToken(rastgeleBilet);
-  };
-
-  useEffect(() => {
-    tokenUret(); // Sayfa açılınca ilk bileti kes
 
     const zamanlayici = setInterval(() => {
       setKalanSaniye((onceki) => {
         if (onceki <= 1) {
-          tokenUret(); // 30 sn doldu, yeni bilet kes
-          return 30;   // Sayacı başa sar
+          const yeniBilet = Math.random().toString(36).substring(2, 10).toUpperCase();
+          setToken(yeniBilet);
+          return 30;
         }
         return onceki - 1;
       });
@@ -28,8 +25,7 @@ export default function DinamikQREkrani() {
     return () => clearInterval(zamanlayici);
   }, []);
 
-  // Telefonun kamerasının okuyacağı dinamik URL (Vercel'e atınca burayı güncelleyeceğiz)
-  const qrLink = `http://localhost:3000/giris?token=${token}`;
+  const qrLink = `https://${window.location.host}/giris?token=${token}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#111827', color: 'white', fontFamily: 'sans-serif' }}>
@@ -37,12 +33,7 @@ export default function DinamikQREkrani() {
       <p style={{ fontSize: '1.2rem', marginBottom: '30px', color: '#d1d5db' }}>Giriş yapmak için telefonunuzun kamerasından QR kodu okutun</p>
       
       <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-        {/* QR Kod Çizici */}
-        <QRCode 
-          value={qrLink} 
-          size={250} 
-          level="H" // Yüksek hata toleransı (uzaktan/çapraz okumayı kolaylaştırır)
-        />
+        {token && <QRCode value={qrLink} size={250} level="H" />}
         
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '25px' }}>
           <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
