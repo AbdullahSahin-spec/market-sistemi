@@ -19,24 +19,26 @@ export default function GelismisAdminPaneli() {
   const [secilenTip, setSecilenTip] = useState("TUMU");
   const [yukleniyor, setYukleniyor] = useState(true);
 
-  // Sayfa açıldığında verileri API'den çek
   useEffect(() => {
     fetch('/api/hareketler')
       .then(res => res.json())
       .then(data => {
-        setHareketler(data);
+        if (Array.isArray(data)) {
+          setHareketler(data);
+        }
         setYukleniyor(false);
       })
       .catch(err => {
-        console.error(err);
+        console.error("Veri çekme hatası:", err);
         setYukleniyor(false);
       });
   }, []);
 
-  // 1. FİLTRELEME MANTIĞI: Kullanıcının aradığı kelimeye ve seçtiği tipe göre listeyi daralt
   const filtrelenmisHareketler = hareketler.filter((hareket) => {
+    if (!hareket.personel) return false;
+    const adSoyad = hareket.personel.adSoyad || "";
     const aramaUygun = 
-      hareket.personel.adSoyad.toLowerCase().includes(aramaMetni.toLowerCase()) || 
+      adSoyad.toLowerCase().includes(aramaMetni.toLowerCase()) || 
       hareket.personelId.toString().includes(aramaMetni);
     
     const tipUygun = secilenTip === "TUMU" || hareket.islemTipi === secilenTip;
@@ -44,14 +46,12 @@ export default function GelismisAdminPaneli() {
     return aramaUygun && tipUygun;
   });
 
-  // 2. EXCEL ÇIKTISI ALMA MANTIĞI
   const excelIndir = () => {
-    // Verileri Excel'in anlayacağı temiz bir formata çeviriyoruz
     const excelVerisi = filtrelenmisHareketler.map((h) => {
       const tarihObj = new Date(h.tarih);
       return {
         "Personel ID": h.personelId,
-        "Ad Soyad": h.personel.adSoyad,
+        "Ad Soyad": h.personel?.adSoyad || "Bilinmiyor",
         "İşlem Tipi": h.islemTipi,
         "Tarih": tarihObj.toLocaleDateString('tr-TR'),
         "Saat": tarihObj.toLocaleTimeString('tr-TR')
@@ -61,8 +61,6 @@ export default function GelismisAdminPaneli() {
     const worksheet = XLSX.utils.json_to_sheet(excelVerisi);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Personel_Hareketleri");
-    
-    // Dosyayı indir
     XLSX.writeFile(workbook, "Market_Personel_Raporu.xlsx");
   };
 
@@ -85,7 +83,6 @@ export default function GelismisAdminPaneli() {
           </button>
         </div>
 
-        {/* Filtreleme ve Arama Alanı */}
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
           <input
             type="text"
@@ -105,7 +102,6 @@ export default function GelismisAdminPaneli() {
           </select>
         </div>
 
-        {/* Tablo */}
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ backgroundColor: '#f9fafb', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>
@@ -128,7 +124,7 @@ export default function GelismisAdminPaneli() {
               filtrelenmisHareketler.map((hareket) => (
                 <tr key={hareket.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ padding: '12px', color: '#374151', fontWeight: 'bold' }}>{hareket.personelId}</td>
-                  <td style={{ padding: '12px', color: '#111827' }}>{hareket.personel.adSoyad}</td>
+                  <td style={{ padding: '12px', color: '#111827' }}>{hareket.personel?.adSoyad}</td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ 
                       backgroundColor: hareket.islemTipi === "GİRİŞ" ? '#dcfce7' : '#fee2e2', 

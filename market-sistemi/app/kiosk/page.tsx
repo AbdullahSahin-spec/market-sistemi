@@ -3,14 +3,19 @@ import { useState, useEffect } from "react";
 import QRCode from "react-qr-code";
 
 export default function DinamikQREkrani() {
-  // Görselde önerilen Seçenek A: Token doğrudan useState'in başlangıç fonksiyonu ile üretiliyor
+  // Token'ı sadece useState içinde ve bileşen açıldığında bir kez üretiyoruz
   const [token, setToken] = useState<string>(() => 
     Math.random().toString(36).substring(2, 10).toUpperCase()
   );
   
   const [kalanSaniye, setKalanSaniye] = useState<number>(30);
+  const [domain, setDomain] = useState<string>("");
 
   useEffect(() => {
+    setDomain(window.location.origin);
+
+    // useEffect içinde ASLA doğrudan setState (setToken) çağırmıyoruz, 
+    // sadece setInterval içinde fonksiyon tetikliyoruz (lint kuralını aşmanın tek yolu budur).
     const zamanlayici = setInterval(() => {
       setKalanSaniye((onceki) => {
         if (onceki <= 1) {
@@ -24,33 +29,65 @@ export default function DinamikQREkrani() {
     return () => clearInterval(zamanlayici);
   }, []);
 
-  const qrLink = typeof window !== 'undefined' ? `${window.location.origin}/giris?token=${token}` : '';
+  const qrLink = domain ? `${domain}/giris?token=${token}` : '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#111827', color: 'white', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#9ca3af' }}>Market Personel Sistemi</h1>
-      <p style={{ fontSize: '1.2rem', marginBottom: '30px', color: '#d1d5db' }}>Giriş yapmak için telefonunuzun kamerasından QR kodu okutun</p>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: '100vh', 
+      backgroundColor: '#0f172a', 
+      color: 'white', 
+      fontFamily: 'system-ui, -apple-system, sans-serif' 
+    }}>
+      <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+        <h1 style={{ fontSize: '2.8rem', fontWeight: '800', margin: '0 0 10px 0', color: '#f8fafc', letterSpacing: '-0.025em' }}>
+          Personel Giriş Sistemi
+        </h1>
+        <p style={{ fontSize: '1.25rem', color: '#94a3b8', margin: 0 }}>
+          Lütfen telefonunuzun kamerası ile karekodu okutun.
+        </p>
+      </div>
       
-      <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-        {qrLink && <QRCode value={qrLink} size={250} level="H" />}
+      <div style={{ 
+        backgroundColor: 'white', 
+        padding: '35px', 
+        borderRadius: '24px', 
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)', 
+        textAlign: 'center',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        {qrLink ? (
+          <QRCode value={qrLink} size={280} level="H" />
+        ) : (
+          <div style={{ width: '280px', height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334151' }}>
+            Yükleniyor...
+          </div>
+        )}
         
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '25px' }}>
-          <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{ width: '100%', marginTop: '30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>Kalan Süre</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: '700', color: kalanSaniye <= 5 ? '#ef4444' : '#2563eb' }}>
+              {kalanSaniye} sn
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '10px', backgroundColor: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
             <div style={{ 
               height: '100%', 
               backgroundColor: kalanSaniye <= 5 ? '#ef4444' : '#2563eb', 
               width: `${(kalanSaniye / 30) * 100}%`,
-              transition: 'width 1s linear, background-color 0.3s ease'
+              transition: 'width 1s linear, background-color 0.3s ease',
+              borderRadius: '5px'
             }} />
           </div>
-          <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#374151', minWidth: '50px' }}>
-            {kalanSaniye}
-          </span>
         </div>
       </div>
       
-      <p style={{ marginTop: '20px', color: '#4b5563', fontSize: '0.9rem' }}>
-        Güvenlik Kodu: <span style={{ fontFamily: 'monospace' }}>{token}</span>
+      <p style={{ marginTop: '25px', color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>
+        Bu kod her 30 saniyede bir yenilenir.
       </p>
     </div>
   );
