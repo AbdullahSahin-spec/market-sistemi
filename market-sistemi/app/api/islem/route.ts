@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'; // Bu satır Next.js'in cache yapmasını tamamen yasaklar!
+
 import { NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
 
