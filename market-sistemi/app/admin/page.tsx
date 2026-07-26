@@ -1,149 +1,121 @@
-"use client";
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 
-interface Hareket {
+type Hareket = {
   id: number;
   personelId: number;
-  islemTipi: string;
+  tip: 'GIRIS' | 'CIKIS';
   tarih: string;
-  personel: {
-    id: number;
-    adSoyad: string;
-  };
-}
+  personel: { id: number; ad: string; soyad: string };
+};
 
-export default function GelismisAdminPaneli() {
+export default function AdminPage() {
   const [hareketler, setHareketler] = useState<Hareket[]>([]);
-  const [aramaMetni, setAramaMetni] = useState("");
-  const [secilenTip, setSecilenTip] = useState("TUMU");
-  const [yukleniyor, setYukleniyor] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const [filtreId, setFiltreId] = useState('');
+  const [filtreIsim, setFiltreIsim] = useState('');
+  const [filtreTip, setFiltreTip] = useState('');
+
+  const veriGetir = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filtreId) params.set('id', filtreId);
+      if (filtreIsim) params.set('isim', filtreIsim);
+      if (filtreTip) params.set('tip', filtreTip);
+
+      const res = await fetch(`/api/hareketler?${params.toString()}`, { cache: 'no-store' });
+      const data = await res.json();
+      setHareketler(data.hareketler ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [filtreId, filtreIsim, filtreTip]);
 
   useEffect(() => {
-    fetch('/api/hareketler')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setHareketler(data);
-        }
-        setYukleniyor(false);
-      })
-      .catch(err => {
-        console.error("Veri çekme hatası:", err);
-        setYukleniyor(false);
-      });
-  }, []);
+    veriGetir();
+  }, [veriGetir]);
 
-  const filtrelenmisHareketler = hareketler.filter((hareket) => {
-    if (!hareket.personel) return false;
-    const adSoyad = hareket.personel.adSoyad || "";
-    const aramaUygun = 
-      adSoyad.toLowerCase().includes(aramaMetni.toLowerCase()) || 
-      hareket.personelId.toString().includes(aramaMetni);
-    
-    const tipUygun = secilenTip === "TUMU" || hareket.islemTipi === secilenTip;
-
-    return aramaUygun && tipUygun;
-  });
-
-  const excelIndir = () => {
-    const excelVerisi = filtrelenmisHareketler.map((h) => {
-      const tarihObj = new Date(h.tarih);
-      return {
-        "Personel ID": h.personelId,
-        "Ad Soyad": h.personel?.adSoyad || "Bilinmiyor",
-        "İşlem Tipi": h.islemTipi,
-        "Tarih": tarihObj.toLocaleDateString('tr-TR'),
-        "Saat": tarihObj.toLocaleTimeString('tr-TR')
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(excelVerisi);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Personel_Hareketleri");
-    XLSX.writeFile(workbook, "Market_Personel_Raporu.xlsx");
-  };
+  function excelAktar() {
+    const rows = hareketler.map((h) => ({
+      ID: h.personel.id,
+      Ad: h.personel.ad,
+      Soyad: h.personel.soyad,
+      İşlem: h.tip === 'GIRIS' ? 'Giriş' : 'Çıkış',
+      Tarih: new Date(h.tarih).toLocaleString('tr-TR'),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Hareketler');
+    XLSX.writeFile(wb, `hareketler-${Date.now()}.xlsx`);
+  }
 
   return (
-    <div style={{ padding: '40px', backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', backgroundColor: 'white', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '15px', marginBottom: '20px' }}>
-          <h1 style={{ color: '#111827', margin: 0, fontSize: '1.8rem' }}>Yönetici Paneli - Raporlama</h1>
-          <button 
-            onClick={excelIndir}
-            disabled={filtrelenmisHareketler.length === 0}
-            style={{ 
-              backgroundColor: filtrelenmisHareketler.length === 0 ? '#9ca3af' : '#16a34a', 
-              color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', 
-              fontWeight: 'bold', cursor: filtrelenmisHareketler.length === 0 ? 'not-allowed' : 'pointer' 
-            }}
-          >
-            📊 Excel İndir (.xlsx)
-          </button>
-        </div>
+    <div className="mx-auto max-w-5xl p-6">
+      <h1 className="mb-4 text-2xl font-semibold">Yönetim Paneli</h1>
 
-        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-          <input
-            type="text"
-            placeholder="Personel Adı veya ID ile Ara..."
-            value={aramaMetni}
-            onChange={(e) => setAramaMetni(e.target.value)}
-            style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc', outline: 'none' }}
-          />
-          <select 
-            value={secilenTip} 
-            onChange={(e) => setSecilenTip(e.target.value)}
-            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc', outline: 'none', cursor: 'pointer' }}
-          >
-            <option value="TUMU">Tüm İşlemler</option>
-            <option value="GİRİŞ">Sadece Girişler</option>
-            <option value="ÇIKIŞ">Sadece Çıkışlar</option>
-          </select>
-        </div>
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          placeholder="Personel ID"
+          value={filtreId}
+          onChange={(e) => setFiltreId(e.target.value)}
+          className="rounded border p-2"
+        />
+        <input
+          placeholder="İsim / Soyisim"
+          value={filtreIsim}
+          onChange={(e) => setFiltreIsim(e.target.value)}
+          className="rounded border p-2"
+        />
+        <select
+          value={filtreTip}
+          onChange={(e) => setFiltreTip(e.target.value)}
+          className="rounded border p-2"
+        >
+          <option value="">Tümü</option>
+          <option value="GIRIS">Giriş</option>
+          <option value="CIKIS">Çıkış</option>
+        </select>
+        <button onClick={veriGetir} className="rounded bg-blue-600 px-4 py-2 text-white">
+          Filtrele
+        </button>
+        <button onClick={excelAktar} className="rounded bg-green-600 px-4 py-2 text-white">
+          Excel'e Aktar
+        </button>
+      </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      {loading ? (
+        <p>Yükleniyor...</p>
+      ) : (
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ backgroundColor: '#f9fafb', color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '12px' }}>ID</th>
-              <th style={{ padding: '12px' }}>Ad Soyad</th>
-              <th style={{ padding: '12px' }}>İşlem Tipi</th>
-              <th style={{ padding: '12px' }}>Tarih & Saat</th>
+            <tr className="border-b bg-gray-100 text-left">
+              <th className="p-2">ID</th>
+              <th className="p-2">Ad Soyad</th>
+              <th className="p-2">İşlem</th>
+              <th className="p-2">Tarih</th>
             </tr>
           </thead>
           <tbody>
-            {yukleniyor ? (
-              <tr>
-                <td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>Veriler yükleniyor...</td>
+            {hareketler.map((h) => (
+              <tr key={h.id} className="border-b">
+                <td className="p-2">{h.personel.id}</td>
+                <td className="p-2">{h.personel.ad} {h.personel.soyad}</td>
+                <td className="p-2">{h.tip === 'GIRIS' ? 'Giriş' : 'Çıkış'}</td>
+                <td className="p-2">{new Date(h.tarih).toLocaleString('tr-TR')}</td>
               </tr>
-            ) : filtrelenmisHareketler.length === 0 ? (
+            ))}
+            {hareketler.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>Aradığınız kritere uygun kayıt bulunamadı.</td>
+                <td colSpan={4} className="p-4 text-center text-gray-500">Kayıt bulunamadı</td>
               </tr>
-            ) : (
-              filtrelenmisHareketler.map((hareket) => (
-                <tr key={hareket.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '12px', color: '#374151', fontWeight: 'bold' }}>{hareket.personelId}</td>
-                  <td style={{ padding: '12px', color: '#111827' }}>{hareket.personel?.adSoyad}</td>
-                  <td style={{ padding: '12px' }}>
-                    <span style={{ 
-                      backgroundColor: hareket.islemTipi === "GİRİŞ" ? '#dcfce7' : '#fee2e2', 
-                      color: hareket.islemTipi === "GİRİŞ" ? '#16a34a' : '#dc2626', 
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold' 
-                    }}>
-                      {hareket.islemTipi}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px', color: '#4b5563', fontWeight: '500' }}>
-                    {new Date(hareket.tarih).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}
-                  </td>
-                </tr>
-              ))
             )}
           </tbody>
         </table>
-
-      </div>
+      )}
     </div>
   );
 }

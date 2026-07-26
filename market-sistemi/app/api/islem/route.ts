@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'; // Bu satır Next.js'in cache yapmasını tamamen yasaklar!
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '../../lib/prisma';
@@ -6,27 +6,29 @@ import { prisma } from '../../lib/prisma';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { personelId, islemTipi } = body; // "GİRİŞ" veya "ÇIKIŞ" gelecek
+    const personelId = Number(body.personelId);
+    const tip = body.tip;
 
-    const personelKontrol = await prisma.personel.findUnique({
-      where: { id: parseInt(personelId) },
-    });
-
-    if (!personelKontrol) {
-      return NextResponse.json({ success: false, message: "Personel bulunamadı." }, { status: 404 });
+    if (!personelId || Number.isNaN(personelId)) {
+      return NextResponse.json({ error: 'Geçersiz personel numarası' }, { status: 400 });
+    }
+    if (tip !== 'GIRIS' && tip !== 'CIKIS') {
+      return NextResponse.json({ error: 'Geçersiz işlem tipi' }, { status: 400 });
     }
 
-    const yeniHareket = await prisma.hareket.create({
-      data: {
-        personelId: parseInt(personelId),
-        islemTipi: islemTipi || "GİRİŞ", 
-      },
+    const personel = await prisma.personel.findUnique({ where: { id: personelId } });
+    if (!personel) {
+      return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 });
+    }
+
+    const hareket = await prisma.hareket.create({
+      data: { personelId, tip },
+      include: { personel: true },
     });
 
-    return NextResponse.json({ success: true, data: yeniHareket }, { status: 200 });
-    
+    return NextResponse.json({ success: true, personel: hareket. personel, hareket });
   } catch (error) {
-    console.error("Kayıt Hatası:", error);
-    return NextResponse.json({ success: false, message: "Kayıt eklenemedi." }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
   }
 }

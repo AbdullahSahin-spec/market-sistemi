@@ -1,29 +1,27 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Personel sabit bilgileri
 model Personel {
-  id        Int       @id @default(autoincrement())
-  adSoyad   String
-  durum     Boolean   @default(true) 
-  kayitlar  Hareket[]
+  id         Int       @id @default(autoincrement())
+  ad         String
+  soyad      String
+  aktif      Boolean   @default(true)
+  hareketler Hareket[]
 }
 
-// Her okutulduğunda düşecek olan kayıtlar
 model Hareket {
-  id          Int      @id @default(autoincrement())
-  personelId  Int
-  personel    Personel @relation(fields: [personelId], references: [id])
-  islemTipi   String   
-  tarih       DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  personelId Int
+  personel   Personel @relation(fields: [personelId], references: [id])
+  tip        String  
+  tarih      DateTime @default(now())
+
+  @@index([personelId])
 }
