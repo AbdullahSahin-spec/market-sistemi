@@ -16,17 +16,17 @@ export default function KioskPage() {
     setToken(generateToken());
   }, []);
 
- useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount kontrolü ve window.location, render sırasında hesaplanamaz
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     setMounted(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- window.location.origin sadece client'ta erişilebilir
     setOrigin(window.location.origin);
     refreshToken();
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const interval = setInterval(refreshToken, 30_000);
     return () => clearInterval(interval);
   }, [refreshToken]);
-  
+
   if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
