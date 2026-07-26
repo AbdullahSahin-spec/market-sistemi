@@ -7,8 +7,6 @@ function generateToken() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export const dynamic = 'force-dynamic';
-
 export default function KioskPage() {
   const [mounted, setMounted] = useState(false);
   const [token, setToken] = useState('');
@@ -18,17 +16,17 @@ export default function KioskPage() {
     setToken(generateToken());
   }, []);
 
-  // Client-only kurulum: window/origin ve ilk token burada set edilir.
-  // Render sırasında değil, effect içinde — prerender/SSR hatası oluşmaz.
-  useEffect(() => {
+ useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount kontrolü ve window.location, render sırasında hesaplanamaz
     setMounted(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- window.location.origin sadece client'ta erişilebilir
     setOrigin(window.location.origin);
     refreshToken();
 
     const interval = setInterval(refreshToken, 30_000);
     return () => clearInterval(interval);
   }, [refreshToken]);
-
+  
   if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
